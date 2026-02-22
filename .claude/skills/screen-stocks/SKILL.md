@@ -58,6 +58,7 @@ python3 /Users/kikuchihiroyuki/stock-skills/.claude/skills/screen-stocks/scripts
 - `trending` : Xトレンド銘柄（Grok API でX上の話題銘柄を発見→Yahoo Financeでファンダメンタルズ評価。`--theme` でテーマ絞り込み可。XAI_API_KEY 必須）
 - `long-term` : 長期投資適性（高ROE≧15%・EPS成長≧10%・配当≧2%・PER≦25・PBR≦3・時価総額1000億以上。長期保有に適した安定成長銘柄を検索）
 - `shareholder-return` : 株主還元重視（配当利回り+自社株買い利回りの総還元率でランキング。安定度評価付き: ✅安定/📈増加/⚠️一時的/📉低下）
+- `breakout` : 新高値ブレイク（52週高値を直近3営業日以内にブレイク＋直前21営業日の「もみ合い」＋四半期成長決算。PER 10〜30・ROE≥10%・売上YoY≥+10%・営業利益YoY≥+20%。実行に時間がかかります）
 
 ## 出力
 
@@ -83,6 +84,9 @@ python3 /Users/kikuchihiroyuki/stock-skills/.claude/skills/screen-stocks/scripts
 
 ### Shareholder Return モードの出力列
 順位 / 銘柄 / 株価 / 配当利回り / 自社株買い利回り / 総還元率 / 安定度 / ROE / PER
+
+### Breakout モードの出力列
+順位 / 銘柄 / セクター / 株価 / PER / ROE / 52週高値 / ブレイク（今日/昨日/一昨日） / 売上YoY / 営業利益YoY / スコア
 
 ## 実行例
 
@@ -143,6 +147,12 @@ python3 .../run_screen.py --region japan --preset shareholder-return
 
 # 米国の高還元株
 python3 .../run_screen.py --region us --preset shareholder-return
+
+# 日本株の新高値ブレイク銘柄
+python3 .../run_screen.py --region japan --preset breakout --top 10
+
+# 米国株の新高値ブレイク銘柄
+python3 .../run_screen.py --region us --preset breakout --top 10
 ```
 
 ## アノテーション機能 (KIK-418/419)

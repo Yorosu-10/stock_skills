@@ -15,8 +15,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "..
 
 from scripts.common import try_import, HAS_HISTORY_STORE, HAS_GRAPH_QUERY as _HAS_GQ
 from src.data import yahoo_client
-from src.core.screening.screener import ValueScreener, QueryScreener, PullbackScreener, AlphaScreener, TrendingScreener, GrowthScreener
-from src.output.formatter import format_markdown, format_query_markdown, format_pullback_markdown, format_alpha_markdown, format_trending_markdown, format_growth_markdown
+from src.core.screening.screener import ValueScreener, QueryScreener, PullbackScreener, AlphaScreener, TrendingScreener, GrowthScreener, BreakoutScreener
+from src.output.formatter import format_markdown, format_query_markdown, format_pullback_markdown, format_alpha_markdown, format_trending_markdown, format_growth_markdown, format_breakout_markdown
 from src.markets.japan import JapanMarket
 from src.markets.us import USMarket
 from src.markets.asean import ASEANMarket
@@ -267,6 +267,31 @@ def run_query_mode(args):
             print()
         return
 
+    # breakout preset uses BreakoutScreener
+    if args.preset == "breakout":
+        screener = BreakoutScreener(yahoo_client)
+        for region_code in regions:
+            region_name = REGION_NAMES.get(region_code, region_code.upper())
+            print(f"\n## {region_name} - 新高値ブレイク スクリーニング結果\n")
+            print("Phase 1: ファンダメンタルズ条件で絞り込み中 (EquityQuery)...")
+            print("Phase 2: 52週高値ブレイク判定中（価格履歴取得）...")
+            print("Phase 3: 四半期成長フィルタ中...")
+            results = screener.screen(region=region_code, top_n=args.top)
+            results, excluded = _annotate(results)
+            print(f"完了: {len(results)}銘柄が条件に合致\n")
+            if excluded:
+                print(f"※ 直近売却済み {excluded}銘柄を除外\n")
+            print(format_breakout_markdown(results))
+            _print_recurring_picks(results)
+            _print_graphrag_context(results)
+            if HAS_HISTORY and results:
+                try:
+                    save_screening(preset="breakout", region=region_code, results=results)
+                except Exception as e:
+                    print(f"Warning: 履歴保存失敗: {e}", file=sys.stderr)
+            print()
+        return
+
     # growth preset uses GrowthScreener
     if args.preset == "growth":
         screener = GrowthScreener(yahoo_client)
@@ -432,7 +457,7 @@ def main():
     parser.add_argument(
         "--preset",
         default="value",
-        choices=["value", "high-dividend", "growth", "growth-value", "deep-value", "quality", "pullback", "alpha", "trending", "long-term", "shareholder-return"],
+        choices=["value", "high-dividend", "growth", "growth-value", "deep-value", "quality", "pullback", "alpha", "trending", "long-term", "shareholder-return", "breakout"],
     )
     parser.add_argument(
         "--sector",
@@ -497,6 +522,10 @@ def main():
 
     if args.preset == "trending" and args.mode == "legacy":
         print("Note: trending preset requires query mode. Switching to --mode query.")
+        args.mode = "query"
+
+    if args.preset == "breakout" and args.mode == "legacy":
+        print("Note: breakout preset requires query mode. Switching to --mode query.")
         args.mode = "query"
 
     if args.mode == "query":

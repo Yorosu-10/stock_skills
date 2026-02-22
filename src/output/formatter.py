@@ -334,3 +334,52 @@ def format_trending_markdown(results: list[dict], market_context: str = "") -> s
 
     _append_annotation_footer(lines, results)
     return "\n".join(lines)
+
+
+def format_breakout_markdown(results: list[dict]) -> str:
+    """Format breakout screening results as a Markdown table.
+
+    Columns: rank / symbol / sector / price / PER / ROE / 52w-high /
+             breakout-day / revenue-YoY / operating-income-YoY / score
+    """
+    if not results:
+        return "新高値ブレイク条件に合致する銘柄が見つかりませんでした。（52週高値ブレイク＋成長決算銘柄なし）"
+
+    _DAY_LABELS = {0: "今日", 1: "昨日", 2: "一昨日"}
+
+    lines = [
+        "| 順位 | 銘柄 | セクター | 株価 | PER | ROE | 52週高値 | ブレイク | 売上YoY | 営業利益YoY | スコア |",
+        "|---:|:-----|:---------|-----:|----:|----:|-------:|:-------:|-------:|----------:|------:|",
+    ]
+
+    for rank, row in enumerate(results, start=1):
+        label = _build_label(row)
+        sector = row.get("sector") or "-"
+
+        price = _fmt_float(row.get("price"), decimals=0) if row.get("price") is not None else "-"
+        per = _fmt_float(row.get("per"))
+        roe = _fmt_pct(row.get("roe"))
+        high_52w = _fmt_float(row.get("high_52w"), decimals=0) if row.get("high_52w") is not None else "-"
+
+        offset = row.get("breakout_day_offset")
+        day_str = _DAY_LABELS.get(offset, "-") if offset is not None else "-"
+
+        rev_yoy = row.get("revenue_yoy")
+        rev_str = _fmt_pct(rev_yoy) if rev_yoy is not None else "N/A"
+
+        op_yoy = row.get("operating_income_yoy")
+        op_str = _fmt_pct(op_yoy) if op_yoy is not None else "N/A"
+
+        score = _fmt_float(row.get("value_score"))
+
+        lines.append(
+            f"| {rank} | {label} | {sector} | {price} | {per} | {roe} "
+            f"| {high_52w} | {day_str} | {rev_str} | {op_str} | {score} |"
+        )
+
+    lines.append("")
+    lines.append("**条件**: 52週高値を直近3営業日以内にブレイク（直前21営業日はタッチなし） + 売上YoY≥+10% + 営業利益YoY≥+20%")
+    lines.append("**N/A**: 四半期データ未取得（日本株で多い）→ 成長条件通過扱い")
+
+    _append_annotation_footer(lines, results)
+    return "\n".join(lines)

@@ -40,6 +40,7 @@ from src.data.yahoo_client.detail import (  # noqa: F401
     get_stock_info,
     get_multiple_stocks,
     get_stock_detail,
+    get_quarterly_financials,
 )
 
 # -- Screening --
@@ -67,6 +68,7 @@ __all__ = [
     "get_stock_info",
     "get_multiple_stocks",
     "get_stock_detail",
+    "get_quarterly_financials",
     "screen_stocks",
     "get_price_history",
     "get_stock_news",

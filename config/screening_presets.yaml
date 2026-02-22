@@ -76,3 +76,11 @@ presets:
       min_dividend_yield: 0.02
       min_earnings_growth: 0.10
       min_market_cap: 100000000000
+
+  breakout:
+    description: "新高値ブレイク（52週高値ブレイク＋成長決算）"
+    mode: "breakout"
+    criteria:
+      min_per: 10
+      max_per: 30
+      min_roe: 0.10

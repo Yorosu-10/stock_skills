@@ -111,6 +111,62 @@ def _build_dividend_history_from_actions(
         return [], []
 
 
+def get_quarterly_financials(symbol: str) -> Optional[dict]:
+    """Fetch quarterly income statement data for YoY growth calculation.
+
+    Uses ``yfinance.Ticker.quarterly_income_stmt`` to compute revenue and
+    operating-income growth versus the same quarter one year ago.
+
+    Returns
+    -------
+    dict or None
+        None  — network/fetch failure (caller should skip this symbol).
+        dict  — always contains ``has_quarterly_data`` (bool) plus optional
+                ``revenue_yoy`` / ``operating_income_yoy`` floats when data
+                is available.
+
+        ``has_quarterly_data=False`` means the data is simply not available
+        (common for Japanese stocks); callers should treat these stocks as
+        passing the quarterly filter rather than failing.
+    """
+    try:
+        time.sleep(1)  # rate-limit consistent with existing pattern
+        ticker = yf.Ticker(symbol)
+        qi = ticker.quarterly_income_stmt
+
+        if qi is None or qi.empty or len(qi.columns) < 5:
+            return {"has_quarterly_data": False, "revenue_yoy": None, "operating_income_yoy": None}
+
+        # Columns are in newest-first order; col[0] = latest quarter, col[4] = same quarter ~1yr ago
+        rev_latest = _try_get_field(qi.iloc[:, [0]], ["Total Revenue", "Revenue"])
+        rev_year_ago = _try_get_field(qi.iloc[:, [4]], ["Total Revenue", "Revenue"])
+        op_latest = _try_get_field(qi.iloc[:, [0]], ["Operating Income", "EBIT"])
+        op_year_ago = _try_get_field(qi.iloc[:, [4]], ["Operating Income", "EBIT"])
+
+        revenue_yoy: Optional[float] = None
+        if rev_latest is not None and rev_year_ago is not None and rev_year_ago != 0:
+            revenue_yoy = (rev_latest - rev_year_ago) / abs(rev_year_ago)
+
+        operating_income_yoy: Optional[float] = None
+        if op_latest is not None and op_year_ago is not None and op_year_ago != 0:
+            operating_income_yoy = (op_latest - op_year_ago) / abs(op_year_ago)
+
+        has_data = revenue_yoy is not None or operating_income_yoy is not None
+        return {
+            "has_quarterly_data": has_data,
+            "revenue_yoy": revenue_yoy,
+            "operating_income_yoy": operating_income_yoy,
+        }
+
+    except (TimeoutError, socket.timeout):
+        return None
+    except Exception as e:
+        if "timed out" in str(e).lower() or "timeout" in str(e).lower():
+            return None
+        # Data unavailable (not a network error) → treat as no quarterly data
+        return {"has_quarterly_data": False, "revenue_yoy": None, "operating_income_yoy": None}
+
+
 def get_stock_info(symbol: str) -> Optional[dict]:
     """Fetch basic stock information for a single symbol.
 
