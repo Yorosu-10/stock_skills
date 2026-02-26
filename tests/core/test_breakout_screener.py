@@ -265,14 +265,14 @@ class TestBreakoutScreenerScreen:
         results = screener.screen(region="jp", top_n=10, skip_quarterly_filter=True)
         assert len(results) == 1
 
-    def test_top_n_limits_result_count(self):
-        """top_n limits the number of returned stocks."""
+    def test_all_results_returned(self):
+        """All matching stocks are returned (no top_n cap)."""
         quotes = [_make_quote(f"S{i}.T") for i in range(10)]
         hist_map = {f"S{i}.T": _make_breakout_hist() for i in range(10)}
         client = _make_mock_client(quotes, hist_map)
         screener = BreakoutScreener(client)
         results = screener.screen(region="jp", top_n=3, skip_quarterly_filter=True)
-        assert len(results) <= 3
+        assert len(results) == 10
 
     def test_result_fields_exist(self):
         """Returned dicts contain expected fields."""

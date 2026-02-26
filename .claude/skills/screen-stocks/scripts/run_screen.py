@@ -8,8 +8,12 @@ Supports two modes:
 """
 
 import argparse
+import csv
+import datetime
+import re
 import sys
 import os
+import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 
@@ -111,6 +115,92 @@ VALID_SECTORS = [
     "Real Estate",
     "Utilities",
 ]
+
+
+def _resolve_ja_name(symbol: str) -> str:
+    """Yahoo Finance Japan から日本語社名を取得する（JP株のみ）。失敗時は空文字を返す。"""
+    if not symbol.endswith(".T"):
+        return ""
+    code = symbol[:-2]  # ".T" を除く
+    try:
+        import requests
+        url = f"https://finance.yahoo.co.jp/quote/{code}"
+        headers = {"User-Agent": "Mozilla/5.0", "Accept-Language": "ja,en;q=0.9"}
+        r = requests.get(url, headers=headers, timeout=10)
+        m = re.search(r"<title[^>]*>(.+?)【", r.text)
+        if m:
+            return m.group(1).strip()
+    except Exception:
+        pass
+    return ""
+
+
+def _save_breakout_csv(results: list, region_code: str) -> str:
+    """Breakout スクリーニング結果を CSV に保存する（銘柄名は日本語）。
+
+    Parameters
+    ----------
+    results : list[dict]
+        BreakoutScreener.screen() の返り値。
+    region_code : str
+        yfinance リージョンコード（例: 'jp'）。
+
+    Returns
+    -------
+    str
+        保存先ファイルパス。
+    """
+    _DAY_LABELS = {0: "今日", 1: "昨日", 2: "一昨日"}
+    date_str = datetime.date.today().strftime("%Y%m%d")
+
+    # プロジェクトルート / data / screening_results
+    project_root = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")
+    )
+    out_dir = os.path.join(project_root, "data", "screening_results")
+    os.makedirs(out_dir, exist_ok=True)
+    filepath = os.path.join(out_dir, f"breakout_{region_code}_{date_str}.csv")
+
+    fields = [
+        "順位", "シンボル", "銘柄名", "株価", "52週高値",
+        "ブレイクタイミング", "PER", "ROE", "売上YoY", "営業利益YoY", "スコア",
+    ]
+
+    print("  日本語銘柄名を取得中...", end="", flush=True)
+    rows = []
+    for rank, r in enumerate(results, 1):
+        sym = r.get("symbol", "")
+        ja_name = _resolve_ja_name(sym) or r.get("name", "")
+        time.sleep(0.3)
+
+        offset = r.get("breakout_day_offset")
+        day_str = _DAY_LABELS.get(offset, "-") if offset is not None else "-"
+
+        roe = r.get("roe")
+        rev = r.get("revenue_yoy")
+        op = r.get("operating_income_yoy")
+
+        rows.append({
+            "順位": rank,
+            "シンボル": sym,
+            "銘柄名": ja_name,
+            "株価": r.get("price", ""),
+            "52週高値": r.get("high_52w", ""),
+            "ブレイクタイミング": day_str,
+            "PER": r.get("per", ""),
+            "ROE": f"{roe * 100:.1f}%" if roe is not None else "-",
+            "売上YoY": f"{rev * 100:.1f}%" if rev is not None else "N/A",
+            "営業利益YoY": f"{op * 100:.1f}%" if op is not None else "N/A",
+            "スコア": r.get("value_score", ""),
+        })
+    print(" 完了")
+
+    with open(filepath, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.DictWriter(f, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    return filepath
 
 
 def _annotate(results):
@@ -289,6 +379,12 @@ def run_query_mode(args):
                     save_screening(preset="breakout", region=region_code, results=results)
                 except Exception as e:
                     print(f"Warning: 履歴保存失敗: {e}", file=sys.stderr)
+            if results:
+                try:
+                    csv_path = _save_breakout_csv(results, region_code)
+                    print(f"💾 CSV保存: {csv_path}")
+                except Exception as e:
+                    print(f"Warning: CSV保存失敗: {e}", file=sys.stderr)
             print()
         return
 

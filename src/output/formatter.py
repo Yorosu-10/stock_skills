@@ -348,18 +348,17 @@ def format_breakout_markdown(results: list[dict]) -> str:
     _DAY_LABELS = {0: "今日", 1: "昨日", 2: "一昨日"}
 
     lines = [
-        "| 順位 | 銘柄 | セクター | 株価 | PER | ROE | 52週高値 | ブレイク | 売上YoY | 営業利益YoY | スコア |",
-        "|---:|:-----|:---------|-----:|----:|----:|-------:|:-------:|-------:|----------:|------:|",
+        "| 順位 | 銘柄 | 株価 | 52週高値 | ブレイクタイミング | PER | ROE | 売上YoY | 営業利益YoY | スコア |",
+        "|---:|:-----|-----:|-------:|:-------:|----:|----:|-------:|----------:|------:|",
     ]
 
     for rank, row in enumerate(results, start=1):
         label = _build_label(row)
-        sector = row.get("sector") or "-"
 
         price = _fmt_float(row.get("price"), decimals=0) if row.get("price") is not None else "-"
+        high_52w = _fmt_float(row.get("high_52w"), decimals=0) if row.get("high_52w") is not None else "-"
         per = _fmt_float(row.get("per"))
         roe = _fmt_pct(row.get("roe"))
-        high_52w = _fmt_float(row.get("high_52w"), decimals=0) if row.get("high_52w") is not None else "-"
 
         offset = row.get("breakout_day_offset")
         day_str = _DAY_LABELS.get(offset, "-") if offset is not None else "-"
@@ -373,8 +372,8 @@ def format_breakout_markdown(results: list[dict]) -> str:
         score = _fmt_float(row.get("value_score"))
 
         lines.append(
-            f"| {rank} | {label} | {sector} | {price} | {per} | {roe} "
-            f"| {high_52w} | {day_str} | {rev_str} | {op_str} | {score} |"
+            f"| {rank} | {label} | {price} | {high_52w} | {day_str} "
+            f"| {per} | {roe} | {rev_str} | {op_str} | {score} |"
         )
 
     lines.append("")

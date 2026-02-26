@@ -242,4 +242,4 @@ class BreakoutScreener:
             })
 
         results.sort(key=lambda r: -(r.get("value_score") or 0.0))
-        return results[:top_n]
+        return results
