@@ -29,6 +29,136 @@ export CONTEXT_RECENT_HOURS=168  # これ以内 → 差分更新 / これ超 →
 
 すべて任意。未設定でもデフォルト値で動作する。
 
+## Python から直接実行する
+
+Claude を使わず、Python スクリプトを直接実行できる。すべてのスクリプトはリポジトリルートから実行する。
+
+### スクリーニング
+
+```bash
+# 日本株 バリュー（デフォルト上位20件）
+python3 .claude/skills/screen-stocks/scripts/run_screen.py --region japan --preset value
+
+# 米国株 高配当 上位10件
+python3 .claude/skills/screen-stocks/scripts/run_screen.py --region us --preset high-dividend --top 10
+
+# 新高値ブレイク（日本株）- --top 省略で全件表示
+python3 .claude/skills/screen-stocks/scripts/run_screen.py --region japan --preset breakout
+
+# セクター絞り込み
+python3 .claude/skills/screen-stocks/scripts/run_screen.py --region japan --preset value --sector Technology
+
+# オプション一覧
+python3 .claude/skills/screen-stocks/scripts/run_screen.py --help
+```
+
+**`--region`**: `japan` / `us` / `asean` / `sg` / `hk` / `kr` / `tw` / `cn` / `gb` 等60地域
+
+**`--preset`**: `value` / `high-dividend` / `growth` / `growth-value` / `deep-value` / `quality` / `pullback` / `alpha` / `trending` / `long-term` / `shareholder-return` / `breakout`
+
+### 個別銘柄レポート
+
+```bash
+python3 .claude/skills/stock-report/scripts/generate_report.py 7203.T   # トヨタ
+python3 .claude/skills/stock-report/scripts/generate_report.py AAPL     # Apple
+python3 .claude/skills/stock-report/scripts/generate_report.py D05.SI   # DBS Bank
+```
+
+### 深掘りリサーチ
+
+```bash
+python3 .claude/skills/market-research/scripts/run_research.py stock 7203.T       # 銘柄
+python3 .claude/skills/market-research/scripts/run_research.py industry 半導体     # 業界
+python3 .claude/skills/market-research/scripts/run_research.py market 日経平均    # マーケット
+python3 .claude/skills/market-research/scripts/run_research.py business 7751.T   # ビジネスモデル
+```
+
+### ポートフォリオ管理
+
+```bash
+# 現在の損益
+python3 .claude/skills/stock-portfolio/scripts/run_portfolio.py snapshot
+
+# 保有銘柄一覧
+python3 .claude/skills/stock-portfolio/scripts/run_portfolio.py list
+
+# 購入記録（--yes で確認スキップ）
+python3 .claude/skills/stock-portfolio/scripts/run_portfolio.py buy \
+  --symbol 7203.T --shares 100 --price 2850 --currency JPY --yes
+
+# 売却記録
+python3 .claude/skills/stock-portfolio/scripts/run_portfolio.py sell \
+  --symbol AAPL --shares 5 --price 220 --yes
+
+# 構造分析・ヘルスチェック・見通し
+python3 .claude/skills/stock-portfolio/scripts/run_portfolio.py analyze
+python3 .claude/skills/stock-portfolio/scripts/run_portfolio.py health
+python3 .claude/skills/stock-portfolio/scripts/run_portfolio.py forecast
+
+# リバランス・シミュレーション
+python3 .claude/skills/stock-portfolio/scripts/run_portfolio.py rebalance
+python3 .claude/skills/stock-portfolio/scripts/run_portfolio.py simulate
+
+# What-If（追加したらどうなる？）
+python3 .claude/skills/stock-portfolio/scripts/run_portfolio.py what-if \
+  --add "7203.T:100:2850"
+
+# 売買成績レビュー
+python3 .claude/skills/stock-portfolio/scripts/run_portfolio.py review
+```
+
+### ストレステスト
+
+```bash
+# 銘柄リストを直接指定
+python3 .claude/skills/stress-test/scripts/run_stress_test.py \
+  --portfolio 7203.T,AAPL,D05.SI
+
+# シナリオ指定（トリプル安 / ドル高円安 / 米国リセッション / 日銀利上げ 等）
+python3 .claude/skills/stress-test/scripts/run_stress_test.py \
+  --portfolio 7203.T,9984.T --scenario トリプル安
+
+# 保有比率指定
+python3 .claude/skills/stress-test/scripts/run_stress_test.py \
+  --portfolio 7203.T,AAPL --weights 0.6,0.4
+```
+
+### ウォッチリスト
+
+```bash
+python3 .claude/skills/watchlist/scripts/manage_watchlist.py list
+python3 .claude/skills/watchlist/scripts/manage_watchlist.py add my-list 7203.T AAPL
+python3 .claude/skills/watchlist/scripts/manage_watchlist.py show my-list
+python3 .claude/skills/watchlist/scripts/manage_watchlist.py remove my-list 7203.T
+```
+
+### 投資メモ
+
+```bash
+# メモ保存
+python3 .claude/skills/investment-note/scripts/manage_note.py save \
+  --symbol 7203.T --type thesis --content "EV普及で部品需要増"
+
+# 一覧表示
+python3 .claude/skills/investment-note/scripts/manage_note.py list
+python3 .claude/skills/investment-note/scripts/manage_note.py list --symbol AAPL
+
+# 削除
+python3 .claude/skills/investment-note/scripts/manage_note.py delete --id NOTE_ID
+```
+
+**`--type`**: `thesis` / `observation` / `concern` / `review` / `target` / `lesson`
+
+### 知識グラフ検索（Neo4j 接続時）
+
+```bash
+python3 .claude/skills/graph-query/scripts/run_query.py "7203.Tの前回レポートは？"
+python3 .claude/skills/graph-query/scripts/run_query.py "繰り返し候補に上がってる銘柄は？"
+python3 .claude/skills/graph-query/scripts/run_query.py "NVDAのセンチメント推移"
+```
+
+---
+
 ## スキル一覧
 
 ### `/screen-stocks` — 割安株スクリーニング
